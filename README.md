@@ -54,6 +54,9 @@ npm start
 - Markdown 研究报告导出
 - JSON 文件持久化工作区
 - Render 单服务部署支持
+- Vercel 静态部署支持
+- Supabase/Postgres 云端持久化支持
+- Vercel Blob 上传适配入口
 
 ## 当前限制
 
@@ -82,3 +85,29 @@ npm start
 2. 在 Render 新建 Blueprint，直接指向这个仓库。
 3. 在 Render 控制台补充需要的环境变量。
 4. 部署完成后访问 Render 分配的域名。
+
+## Supabase 持久化
+
+前端已经支持 `API -> Supabase -> localStorage` 的三级回退。
+
+如果你要在 Vercel 静态站上启用真正的云端持久化：
+
+1. 在 Supabase 中执行 [schema.sql](/Users/linzhang/Desktop/%20%20%20%20%20%20OPC/Ponder对标平台/07-原型与代码/supabase/schema.sql)
+2. 在 Vercel 项目环境变量中配置：
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+   - `VITE_SUPABASE_WORKSPACE_ID`
+3. 重新部署前端
+
+## Vercel Blob
+
+代码里已经加好了 Blob 上传端点和前端适配：
+
+- [upload.ts](/Users/linzhang/Desktop/%20%20%20%20%20%20OPC/Ponder对标平台/07-原型与代码/api/blob/upload.ts)
+- [blob-upload.ts](/Users/linzhang/Desktop/%20%20%20%20%20%20OPC/Ponder对标平台/07-原型与代码/apps/web/src/lib/blob-upload.ts)
+
+启用方式：
+
+1. 在 Vercel 环境变量中设置 `BLOB_READ_WRITE_TOKEN`
+2. 使用带 `/api/blob/upload` 的部署形态
+3. 重新部署
