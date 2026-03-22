@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: ponder-knowledge-platform
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 4000
+      - key: PONDER_STORAGE_PATH
+        value: data/workspace.json
+      - key: MAX_UPLOAD_BYTES
+        value: 10485760
