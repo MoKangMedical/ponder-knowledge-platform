@@ -1,0 +1,20 @@
+{
+  "name": "ponder-clone-mvp",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w @ponder/web\" \"npm run dev -w @ponder/api\"",
+    "build": "npm run build -w @ponder/shared && npm run build -w @ponder/api && npm run build -w @ponder/web",
+    "start": "npm run start -w @ponder/api",
+    "lint": "npm run lint -w @ponder/web",
+    "typecheck": "npm run typecheck -w @ponder/shared && npm run typecheck -w @ponder/api && npm run typecheck -w @ponder/web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "typescript": "^5.9.3"
+  }
+}
