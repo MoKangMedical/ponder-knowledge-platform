@@ -9,9 +9,13 @@
   "scripts": {
     "dev": "concurrently \"npm run dev -w @ponder/web\" \"npm run dev -w @ponder/api\"",
     "build": "npm run build -w @ponder/shared && npm run build -w @ponder/api && npm run build -w @ponder/web",
+    "build:vercel": "npm run build -w @ponder/shared && npm run build -w @ponder/web",
     "start": "npm run start -w @ponder/api",
     "lint": "npm run lint -w @ponder/web",
     "typecheck": "npm run typecheck -w @ponder/shared && npm run typecheck -w @ponder/api && npm run typecheck -w @ponder/web"
+  },
+  "dependencies": {
+    "formidable": "^3.5.4"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
