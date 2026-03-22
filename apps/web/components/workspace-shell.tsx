@@ -11,13 +11,17 @@ import {
   type Source,
   type WorkspaceState
 } from "@ponder/shared";
+import {
+  loadBrowserWorkspace,
+  persistBrowserWorkspace,
+  type BrowserStorageMode
+} from "../src/lib/browser-workspace";
+import { uploadFileToBlob } from "../src/lib/blob-upload";
 
 const apiBase =
   typeof window !== "undefined" && window.location.port === "3000"
     ? "http://localhost:4000"
     : "";
-
-const storageKey = "ponder-platform-workspace-v1";
 
 type BootstrapResponse = {
   workspace: WorkspaceState;
@@ -25,44 +29,6 @@ type BootstrapResponse = {
 };
 
 const defaultQuestion = "如果我要把这个平台做得比 Ponder 更强，最应该先补哪三个能力？";
-
-function getSeedWorkspace(): WorkspaceState {
-  return createWorkspaceSnapshot(
-    demoSources.map((source) =>
-      createSource({
-        ...source,
-        id: source.id,
-        createdAt: source.createdAt,
-        tags: source.tags
-      })
-    )
-  );
-}
-
-function loadLocalWorkspace(): WorkspaceState {
-  if (typeof window === "undefined") {
-    return getSeedWorkspace();
-  }
-
-  try {
-    const raw = window.localStorage.getItem(storageKey);
-    if (!raw) {
-      const seeded = getSeedWorkspace();
-      window.localStorage.setItem(storageKey, JSON.stringify(seeded));
-      return seeded;
-    }
-
-    return refreshWorkspaceState(JSON.parse(raw) as WorkspaceState);
-  } catch {
-    return getSeedWorkspace();
-  }
-}
-
-function saveLocalWorkspace(workspace: WorkspaceState) {
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(storageKey, JSON.stringify(refreshWorkspaceState(workspace)));
-  }
-}
 
 export function WorkspaceShell() {
   const [workspace, setWorkspace] = useState<WorkspaceState | null>(null);
@@ -79,14 +45,14 @@ export function WorkspaceShell() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [storageMode, setStorageMode] = useState<"api" | "local">("api");
+  const [storageMode, setStorageMode] = useState<"api" | BrowserStorageMode>("api");
 
-  function syncWorkspace(nextWorkspace: WorkspaceState, nextReport?: string) {
+  async function syncWorkspace(nextWorkspace: WorkspaceState, nextReport?: string) {
     const refreshed = refreshWorkspaceState(nextWorkspace);
     setWorkspace(refreshed);
     setReportMarkdown(nextReport ?? buildReportMarkdown(refreshed));
-    if (storageMode === "local") {
-      saveLocalWorkspace(refreshed);
+    if (storageMode !== "api") {
+      await persistBrowserWorkspace(storageMode, refreshed);
     }
   }
 
@@ -112,11 +78,15 @@ export function WorkspaceShell() {
     async function bootstrap() {
       const apiOk = await tryApiBootstrap();
       if (!apiOk && !ignore) {
-        const local = loadLocalWorkspace();
-        setStorageMode("local");
-        setWorkspace(local);
-        setReportMarkdown(buildReportMarkdown(local));
-        setSuccess("当前运行在浏览器本地工作区模式，适合 Vercel 静态部署。");
+        const browser = await loadBrowserWorkspace();
+        setStorageMode(browser.mode);
+        setWorkspace(browser.workspace);
+        setReportMarkdown(browser.reportMarkdown);
+        setSuccess(
+          browser.mode === "supabase"
+            ? "当前运行在 Supabase 云端持久化模式。"
+            : "当前运行在浏览器本地工作区模式，适合 Vercel 静态部署。"
+        );
       }
       if (!ignore) {
         setLoading(false);
@@ -207,14 +177,14 @@ export function WorkspaceShell() {
         }
 
         const data = (await res.json()) as { workspace: WorkspaceState; reportMarkdown?: string };
-        syncWorkspace(data.workspace, data.reportMarkdown);
+        await syncWorkspace(data.workspace, data.reportMarkdown);
       } else {
         const source = createSource({
           title: textTitle,
           content: textContent,
           type: textType
         });
-        syncWorkspace({
+        await syncWorkspace({
           ...workspace,
           sources: [source, ...workspace.sources]
         });
@@ -246,7 +216,7 @@ export function WorkspaceShell() {
         }
 
         const data = (await res.json()) as { workspace: WorkspaceState; reportMarkdown?: string };
-        syncWorkspace(data.workspace, data.reportMarkdown);
+        await syncWorkspace(data.workspace, data.reportMarkdown);
       } else {
         let content = `URL: ${urlValue}\n静态部署模式下未经过后端抓取。建议补充网页摘要或在本地全栈模式下使用 URL intake。`;
 
@@ -266,7 +236,7 @@ export function WorkspaceShell() {
           type: "web",
           url: urlValue
         });
-        syncWorkspace({
+        await syncWorkspace({
           ...workspace,
           sources: [source, ...workspace.sources]
         });
@@ -295,17 +265,21 @@ export function WorkspaceShell() {
         }
 
         const data = (await res.json()) as { workspace: WorkspaceState; reportMarkdown?: string };
-        syncWorkspace(data.workspace, data.reportMarkdown);
+        await syncWorkspace(data.workspace, data.reportMarkdown);
       } else {
         const text = await file.text().catch(() => "");
+        const blobUrl = await uploadFileToBlob(file);
         const source = createSource({
           title: file.name,
           content:
             text ||
-            `Uploaded file ${file.name}. 静态部署模式下文件仅保留文本摘要，二进制解析需要后端服务。`,
-          type: file.type.includes("pdf") ? "pdf" : "file"
+            `Uploaded file ${file.name}. ${
+              blobUrl ? `Blob URL: ${blobUrl}` : "当前未连到 Blob 上传端点，先保留文本摘要。"
+            }`,
+          type: file.type.includes("pdf") ? "pdf" : "file",
+          url: blobUrl ?? undefined
         });
-        syncWorkspace({
+        await syncWorkspace({
           ...workspace,
           sources: [source, ...workspace.sources]
         });
@@ -329,9 +303,9 @@ export function WorkspaceShell() {
           throw new Error("refresh failed");
         }
         const data = (await res.json()) as { workspace: WorkspaceState };
-        syncWorkspace(data.workspace);
+        await syncWorkspace(data.workspace);
       } else {
-        syncWorkspace({
+        await syncWorkspace({
           ...workspace,
           insights: buildInsights(workspace.sources)
         });
@@ -369,7 +343,9 @@ export function WorkspaceShell() {
             这版已经把来源库、引用式问答、洞察板、节点工作区和报告导出压成一个工作台。
             {storageMode === "local"
               ? "当前 Vercel 预览将使用浏览器本地工作区模式。"
-              : "当前运行在本地全栈模式。"}
+              : storageMode === "supabase"
+                ? "当前运行在 Supabase 云端持久化模式。"
+                : "当前运行在本地全栈模式。"}
           </p>
         </div>
         <div className="metric-row">
@@ -390,7 +366,12 @@ export function WorkspaceShell() {
           Download Report
         </button>
         <div className="status-chip">
-          {success || (storageMode === "local" ? "Static Vercel mode with browser persistence." : "Workspace ready for intake, ask, export.")}
+          {success ||
+            (storageMode === "local"
+              ? "Static Vercel mode with browser persistence."
+              : storageMode === "supabase"
+                ? "Cloud persistence enabled with Supabase."
+                : "Workspace ready for intake, ask, export.")}
         </div>
       </section>
 
