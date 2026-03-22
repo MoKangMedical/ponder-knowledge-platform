@@ -1,10 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
-import type { AnswerResponse, Source, WorkspaceState } from "@ponder/shared";
+import {
+  buildAnswer,
+  buildInsights,
+  buildReportMarkdown,
+  createSource,
+  createWorkspaceSnapshot,
+  demoSources,
+  refreshWorkspaceState,
+  type AnswerResponse,
+  type Source,
+  type WorkspaceState
+} from "@ponder/shared";
 
 const apiBase =
   typeof window !== "undefined" && window.location.port === "3000"
     ? "http://localhost:4000"
     : "";
+
+const storageKey = "ponder-platform-workspace-v1";
 
 type BootstrapResponse = {
   workspace: WorkspaceState;
@@ -12,6 +25,44 @@ type BootstrapResponse = {
 };
 
 const defaultQuestion = "如果我要把这个平台做得比 Ponder 更强，最应该先补哪三个能力？";
+
+function getSeedWorkspace(): WorkspaceState {
+  return createWorkspaceSnapshot(
+    demoSources.map((source) =>
+      createSource({
+        ...source,
+        id: source.id,
+        createdAt: source.createdAt,
+        tags: source.tags
+      })
+    )
+  );
+}
+
+function loadLocalWorkspace(): WorkspaceState {
+  if (typeof window === "undefined") {
+    return getSeedWorkspace();
+  }
+
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    if (!raw) {
+      const seeded = getSeedWorkspace();
+      window.localStorage.setItem(storageKey, JSON.stringify(seeded));
+      return seeded;
+    }
+
+    return refreshWorkspaceState(JSON.parse(raw) as WorkspaceState);
+  } catch {
+    return getSeedWorkspace();
+  }
+}
+
+function saveLocalWorkspace(workspace: WorkspaceState) {
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(storageKey, JSON.stringify(refreshWorkspaceState(workspace)));
+  }
+}
 
 export function WorkspaceShell() {
   const [workspace, setWorkspace] = useState<WorkspaceState | null>(null);
@@ -28,33 +79,47 @@ export function WorkspaceShell() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [storageMode, setStorageMode] = useState<"api" | "local">("api");
 
-  async function loadWorkspace() {
-    const res = await fetch(`${apiBase}/api/bootstrap`);
-    const data = (await res.json()) as BootstrapResponse;
-    setWorkspace(data.workspace);
-    setReportMarkdown(data.reportMarkdown);
+  function syncWorkspace(nextWorkspace: WorkspaceState, nextReport?: string) {
+    const refreshed = refreshWorkspaceState(nextWorkspace);
+    setWorkspace(refreshed);
+    setReportMarkdown(nextReport ?? buildReportMarkdown(refreshed));
+    if (storageMode === "local") {
+      saveLocalWorkspace(refreshed);
+    }
+  }
+
+  async function tryApiBootstrap(): Promise<boolean> {
+    try {
+      const res = await fetch(`${apiBase}/api/bootstrap`);
+      if (!res.ok) {
+        return false;
+      }
+      const data = (await res.json()) as BootstrapResponse;
+      setStorageMode("api");
+      setWorkspace(data.workspace);
+      setReportMarkdown(data.reportMarkdown);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   useEffect(() => {
     let ignore = false;
 
     async function bootstrap() {
-      try {
-        const res = await fetch(`${apiBase}/api/bootstrap`);
-        const data = (await res.json()) as BootstrapResponse;
-        if (!ignore) {
-          setWorkspace(data.workspace);
-          setReportMarkdown(data.reportMarkdown);
-        }
-      } catch {
-        if (!ignore) {
-          setError("无法连接平台 API。开发模式下请先执行 npm run dev。");
-        }
-      } finally {
-        if (!ignore) {
-          setLoading(false);
-        }
+      const apiOk = await tryApiBootstrap();
+      if (!apiOk && !ignore) {
+        const local = loadLocalWorkspace();
+        setStorageMode("local");
+        setWorkspace(local);
+        setReportMarkdown(buildReportMarkdown(local));
+        setSuccess("当前运行在浏览器本地工作区模式，适合 Vercel 静态部署。");
+      }
+      if (!ignore) {
+        setLoading(false);
       }
     }
 
@@ -91,82 +156,187 @@ export function WorkspaceShell() {
   }
 
   async function handleAsk() {
+    if (!workspace) {
+      return;
+    }
+
     await withBusy(async () => {
-      const res = await fetch(`${apiBase}/api/ask`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ question })
-      });
-      const data = (await res.json()) as AnswerResponse;
-      setAnswer(data);
+      if (storageMode === "api") {
+        const res = await fetch(`${apiBase}/api/ask`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ question })
+        });
+
+        if (!res.ok) {
+          throw new Error("ask failed");
+        }
+
+        const data = (await res.json()) as AnswerResponse;
+        setAnswer(data);
+        return;
+      }
+
+      setAnswer(buildAnswer(question, workspace.sources));
     });
   }
 
   async function handleTextIngest() {
+    if (!workspace) {
+      return;
+    }
+
     await withBusy(async () => {
-      await fetch(`${apiBase}/api/intake/text`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
+      if (storageMode === "api") {
+        const res = await fetch(`${apiBase}/api/intake/text`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            title: textTitle,
+            content: textContent,
+            type: textType
+          })
+        });
+
+        if (!res.ok) {
+          throw new Error("text ingest failed");
+        }
+
+        const data = (await res.json()) as { workspace: WorkspaceState; reportMarkdown?: string };
+        syncWorkspace(data.workspace, data.reportMarkdown);
+      } else {
+        const source = createSource({
           title: textTitle,
           content: textContent,
           type: textType
-        })
-      });
-      await loadWorkspace();
+        });
+        syncWorkspace({
+          ...workspace,
+          sources: [source, ...workspace.sources]
+        });
+      }
+
       setSuccess("文本来源已加入工作区。");
     });
   }
 
   async function handleUrlIngest() {
-    await withBusy(async () => {
-      const res = await fetch(`${apiBase}/api/intake/url`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          url: urlValue
-        })
-      });
-      if (!res.ok) {
-        throw new Error("URL ingest failed");
-      }
-      await loadWorkspace();
-      setSuccess("URL 来源已抓取并写入工作区。");
-    });
-  }
-
-  async function handleFileIngest(file: File | null) {
-    if (!file) {
+    if (!workspace) {
       return;
     }
 
     await withBusy(async () => {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch(`${apiBase}/api/intake/file`, {
-        method: "POST",
-        body: formData
-      });
-      if (!res.ok) {
-        throw new Error("file ingest failed");
+      if (storageMode === "api") {
+        const res = await fetch(`${apiBase}/api/intake/url`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            url: urlValue
+          })
+        });
+
+        if (!res.ok) {
+          throw new Error("URL ingest failed");
+        }
+
+        const data = (await res.json()) as { workspace: WorkspaceState; reportMarkdown?: string };
+        syncWorkspace(data.workspace, data.reportMarkdown);
+      } else {
+        let content = `URL: ${urlValue}\n静态部署模式下未经过后端抓取。建议补充网页摘要或在本地全栈模式下使用 URL intake。`;
+
+        try {
+          const response = await fetch(urlValue);
+          if (response.ok) {
+            const html = await response.text();
+            content = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 2200);
+          }
+        } catch {
+          // Keep fallback content when browser CORS blocks direct fetching.
+        }
+
+        const source = createSource({
+          title: `URL import: ${urlValue}`,
+          content,
+          type: "web",
+          url: urlValue
+        });
+        syncWorkspace({
+          ...workspace,
+          sources: [source, ...workspace.sources]
+        });
       }
-      await loadWorkspace();
+
+      setSuccess("URL 来源已加入工作区。");
+    });
+  }
+
+  async function handleFileIngest(file: File | null) {
+    if (!workspace || !file) {
+      return;
+    }
+
+    await withBusy(async () => {
+      if (storageMode === "api") {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await fetch(`${apiBase}/api/intake/file`, {
+          method: "POST",
+          body: formData
+        });
+
+        if (!res.ok) {
+          throw new Error("file ingest failed");
+        }
+
+        const data = (await res.json()) as { workspace: WorkspaceState; reportMarkdown?: string };
+        syncWorkspace(data.workspace, data.reportMarkdown);
+      } else {
+        const text = await file.text().catch(() => "");
+        const source = createSource({
+          title: file.name,
+          content:
+            text ||
+            `Uploaded file ${file.name}. 静态部署模式下文件仅保留文本摘要，二进制解析需要后端服务。`,
+          type: file.type.includes("pdf") ? "pdf" : "file"
+        });
+        syncWorkspace({
+          ...workspace,
+          sources: [source, ...workspace.sources]
+        });
+      }
+
       setSuccess(`文件 ${file.name} 已加入工作区。`);
     });
   }
 
   async function handleRefreshInsights() {
+    if (!workspace) {
+      return;
+    }
+
     await withBusy(async () => {
-      await fetch(`${apiBase}/api/insights/refresh`, {
-        method: "POST"
-      });
-      await loadWorkspace();
+      if (storageMode === "api") {
+        const res = await fetch(`${apiBase}/api/insights/refresh`, {
+          method: "POST"
+        });
+        if (!res.ok) {
+          throw new Error("refresh failed");
+        }
+        const data = (await res.json()) as { workspace: WorkspaceState };
+        syncWorkspace(data.workspace);
+      } else {
+        syncWorkspace({
+          ...workspace,
+          insights: buildInsights(workspace.sources)
+        });
+      }
+
       setSuccess("洞察与节点已刷新。");
     });
   }
@@ -196,8 +366,10 @@ export function WorkspaceShell() {
           <p className="eyebrow">Knowledge Foundry / Deployable V1</p>
           <h1>一个能替代“散乱研究流程”的 AI 知识平台。</h1>
           <p className="hero-text">
-            这版已经把来源库、引用式问答、洞察板、节点工作区和报告导出压成一个单服务平台，可直接放到
-            GitHub 后接入 Render 上线。
+            这版已经把来源库、引用式问答、洞察板、节点工作区和报告导出压成一个工作台。
+            {storageMode === "local"
+              ? "当前 Vercel 预览将使用浏览器本地工作区模式。"
+              : "当前运行在本地全栈模式。"}
           </p>
         </div>
         <div className="metric-row">
@@ -217,7 +389,9 @@ export function WorkspaceShell() {
         <button onClick={handleDownloadReport} disabled={!reportMarkdown}>
           Download Report
         </button>
-        <div className="status-chip">{success || "Workspace ready for intake, ask, export."}</div>
+        <div className="status-chip">
+          {success || (storageMode === "local" ? "Static Vercel mode with browser persistence." : "Workspace ready for intake, ask, export.")}
+        </div>
       </section>
 
       <section className="grid top-grid">
@@ -277,7 +451,9 @@ export function WorkspaceShell() {
                 onChange={(event) => handleFileIngest(event.target.files?.[0] ?? null)}
               />
             </label>
-            <p className="helper-text">当前支持文本类文件，PDF 会先以元数据形式进入工作区。</p>
+            <p className="helper-text">
+              静态部署下文件会保留文本摘要；本地全栈模式下走后端入口。
+            </p>
           </div>
         </div>
 
