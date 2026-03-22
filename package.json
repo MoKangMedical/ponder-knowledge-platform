@@ -15,6 +15,7 @@
     "typecheck": "npm run typecheck -w @ponder/shared && npm run typecheck -w @ponder/api && npm run typecheck -w @ponder/web"
   },
   "dependencies": {
+    "@vercel/blob": "^1.1.1",
     "formidable": "^3.5.4"
   },
   "devDependencies": {
