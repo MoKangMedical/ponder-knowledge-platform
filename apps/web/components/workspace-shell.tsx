@@ -30,7 +30,7 @@ type BootstrapResponse = {
 
 const defaultQuestion = "如果我要把这个平台做得比 Ponder 更强，最应该先补哪三个能力？";
 
-export function WorkspaceShell() {
+export function WorkspaceShell({ onBack }: { onBack?: () => void }) {
   const [workspace, setWorkspace] = useState<WorkspaceState | null>(null);
   const [reportMarkdown, setReportMarkdown] = useState("");
   const [question, setQuestion] = useState(defaultQuestion);
@@ -335,6 +335,20 @@ export function WorkspaceShell() {
 
   return (
     <main className="app-shell">
+      <section className="workspace-nav">
+        <button className="ghost-button" onClick={onBack} disabled={!onBack}>
+          返回公开展示页
+        </button>
+        <span>
+          当前模式：
+          {storageMode === "local"
+            ? "浏览器本地工作区"
+            : storageMode === "supabase"
+              ? "Supabase 云端持久化"
+              : "本地 API 全栈"}
+        </span>
+      </section>
+
       <section className="hero-panel">
         <div className="hero-copy">
           <p className="eyebrow">Knowledge Foundry / Deployable V1</p>
