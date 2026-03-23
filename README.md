@@ -86,6 +86,21 @@ npm start
 3. 在 Render 控制台补充需要的环境变量。
 4. 部署完成后访问 Render 分配的域名。
 
+## GitHub Pages
+
+项目也支持直接发布到 GitHub Pages：
+
+- 站点地址：`https://mokangmedical.github.io/ponder-knowledge-platform/`
+- 构建命令：`npm run build:pages`
+- 发布目录：`apps/web/dist`
+
+说明：
+
+- 这是静态展示站，适合展示产品界面与交互。
+- 如果未配置 Supabase，则默认回退为浏览器本地工作区。
+- `build:pages` 已内置 Pages 所需的 base path，无需额外传参。
+- 如果不走 GitHub Actions，也可以直接把 `apps/web/dist` 发布到 `gh-pages` 分支。
+
 ## Supabase 持久化
 
 前端已经支持 `API -> Supabase -> localStorage` 的三级回退。
