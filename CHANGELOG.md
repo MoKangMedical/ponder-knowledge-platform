@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 更新日志
 
 所有项目的更改都将记录在此文件中。
@@ -82,3 +83,10 @@
 - [GitHub Releases](https://github.com/MoKangMedical/ponder-knowledge-platform/releases)
 - [GitHub Issues](https://github.com/MoKangMedical/ponder-knowledge-platform/issues)
 - [GitHub Pull Requests](https://github.com/MoKangMedical/ponder-knowledge-platform/pulls)
+=======
+# CHANGELOG
+
+## 2026-04-22 — Hermes改进
+- 📐 理论标准化（Harness+红杉+宪法）
+- 🔒 安全规则补全（.gitignore）
+>>>>>>> 3293dd9 (Hermes: ponder-knowledge-platform - CHANGELOG/README补全)
