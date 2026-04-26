@@ -1,0 +1,144 @@
+{
+  "name": "示例医疗知识图谱",
+  "version": "1.0.0",
+  "description": "以2型糖尿病为中心的示例知识图谱数据",
+  "entities": [
+    {
+      "id": "D001",
+      "type": "Disease",
+      "name": "2型糖尿病",
+      "icd10_code": "E11",
+      "category": "内分泌代谢疾病",
+      "description": "以胰岛素抵抗和相对胰岛素缺乏为特征的慢性代谢性疾病"
+    },
+    {
+      "id": "D002",
+      "type": "Disease",
+      "name": "高血压",
+      "icd10_code": "I10",
+      "category": "心血管疾病",
+      "description": "以动脉血压持续升高为特征的慢性心血管疾病"
+    },
+    {
+      "id": "D003",
+      "type": "Disease",
+      "name": "糖尿病肾病",
+      "icd10_code": "E11.2",
+      "category": "内分泌代谢疾病",
+      "description": "糖尿病引起的慢性肾脏损害"
+    },
+    {
+      "id": "S001",
+      "type": "Symptom",
+      "name": "多饮",
+      "description": "口渴感增加，饮水量明显增多",
+      "severity_levels": ["轻度", "中度", "重度"]
+    },
+    {
+      "id": "S002",
+      "type": "Symptom",
+      "name": "多尿",
+      "description": "排尿次数和尿量增加",
+      "severity_levels": ["轻度", "中度", "重度"]
+    },
+    {
+      "id": "S003",
+      "type": "Symptom",
+      "name": "多食",
+      "description": "食欲亢进，进食量增加",
+      "severity_levels": ["轻度", "中度", "重度"]
+    },
+    {
+      "id": "S004",
+      "type": "Symptom",
+      "name": "体重下降",
+      "description": "非自愿性体重减轻",
+      "severity_levels": ["轻度", "中度", "重度"]
+    },
+    {
+      "id": "S005",
+      "type": "Symptom",
+      "name": "蛋白尿",
+      "description": "尿液中蛋白质含量异常升高",
+      "severity_levels": ["微量", "中量", "大量"]
+    },
+    {
+      "id": "DR001",
+      "type": "Drug",
+      "name": "二甲双胍",
+      "generic_name": "Metformin",
+      "drug_class": "双胍类降糖药",
+      "mechanism": "减少肝糖输出，增加外周组织对葡萄糖的利用",
+      "dosage_form": "片剂/缓释片"
+    },
+    {
+      "id": "DR002",
+      "type": "Drug",
+      "name": "恩格列净",
+      "generic_name": "Empagliflozin",
+      "drug_class": "SGLT2抑制剂",
+      "mechanism": "抑制肾脏近端小管对葡萄糖的重吸收",
+      "dosage_form": "片剂"
+    },
+    {
+      "id": "DR003",
+      "type": "Drug",
+      "name": "缬沙坦",
+      "generic_name": "Valsartan",
+      "drug_class": "ARB类降压药",
+      "mechanism": "阻断血管紧张素II受体，扩张血管",
+      "dosage_form": "胶囊/片剂"
+    },
+    {
+      "id": "E001",
+      "type": "Examination",
+      "name": "空腹血糖",
+      "category": "LabTest",
+      "normal_range": "3.9-6.1 mmol/L",
+      "clinical_significance": "评估血糖水平，筛查和诊断糖尿病"
+    },
+    {
+      "id": "E002",
+      "type": "Examination",
+      "name": "糖化血红蛋白",
+      "category": "LabTest",
+      "normal_range": "< 6.5%",
+      "clinical_significance": "反映近2-3个月的平均血糖水平"
+    },
+    {
+      "id": "E003",
+      "type": "Examination",
+      "name": "尿微量白蛋白",
+      "category": "LabTest",
+      "normal_range": "< 30 mg/24h",
+      "clinical_significance": "早期发现糖尿病肾病的敏感指标"
+    },
+    {
+      "id": "E004",
+      "type": "Examination",
+      "name": "肾功能检查",
+      "category": "LabTest",
+      "normal_range": "BUN 2.9-8.2 mmol/L; Cr 44-133 μmol/L",
+      "clinical_significance": "评估肾脏滤过功能"
+    }
+  ],
+  "relations": [
+    {"source": "D001", "target": "S001", "type": "HAS_SYMPTOM", "frequency": "常见"},
+    {"source": "D001", "target": "S002", "type": "HAS_SYMPTOM", "frequency": "常见"},
+    {"source": "D001", "target": "S003", "type": "HAS_SYMPTOM", "frequency": "常见"},
+    {"source": "D001", "target": "S004", "type": "HAS_SYMPTOM", "frequency": "较常见"},
+    {"source": "D001", "target": "DR001", "type": "TREATED_BY", "line_of_therapy": "一线", "evidence_level": "A"},
+    {"source": "D001", "target": "DR002", "type": "TREATED_BY", "line_of_therapy": "二线", "evidence_level": "A"},
+    {"source": "D001", "target": "E001", "type": "DIAGNOSED_BY", "necessity": "必查"},
+    {"source": "D001", "target": "E002", "type": "DIAGNOSED_BY", "necessity": "必查"},
+    {"source": "D001", "target": "E003", "type": "DIAGNOSED_BY", "necessity": "定期筛查"},
+    {"source": "D001", "target": "D002", "type": "COMORBID_WITH", "correlation_strength": "高"},
+    {"source": "D001", "target": "D003", "type": "COMORBID_WITH", "correlation_strength": "高"},
+    {"source": "D003", "target": "S005", "type": "HAS_SYMPTOM", "frequency": "典型"},
+    {"source": "D003", "target": "E003", "type": "DIAGNOSED_BY", "necessity": "必查"},
+    {"source": "D003", "target": "E004", "type": "DIAGNOSED_BY", "necessity": "必查"},
+    {"source": "D003", "target": "DR002", "type": "TREATED_BY", "evidence_level": "A"},
+    {"source": "D002", "target": "DR003", "type": "TREATED_BY", "line_of_therapy": "一线"},
+    {"source": "DR002", "target": "D003", "type": "ADMINISTERED_FOR", "efficacy": "肾脏保护"}
+  ]
+}

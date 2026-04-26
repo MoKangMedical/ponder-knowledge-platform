@@ -1,0 +1,103 @@
+{
+  "name": "医学本体 (Medical Ontology)",
+  "version": "1.0.0",
+  "description": "医疗领域核心本体定义，涵盖疾病、症状、药物、检查四大类实体及其关系",
+  "entity_types": {
+    "Disease": {
+      "label": "疾病",
+      "description": "各类疾病的定义与分类",
+      "properties": ["name", "icd10_code", "category", "description", "prevalence", "mortality_rate"],
+      "subtypes": ["InfectiousDisease", "ChronicDisease", "GeneticDisease", "AutoimmuneDisease", "Neoplasm"]
+    },
+    "Symptom": {
+      "label": "症状",
+      "description": "疾病的临床表现",
+      "properties": ["name", "description", "severity_levels", "duration", "onset_type"],
+      "subtypes": ["PrimarySymptom", "SecondarySymptom", "ConstitutionalSymptom"]
+    },
+    "Drug": {
+      "label": "药物",
+      "description": "治疗药物信息",
+      "properties": ["name", "generic_name", "drug_class", "mechanism", "dosage_form", "contraindications"],
+      "subtypes": ["ChemicalDrug", "BiologicalDrug", "TraditionalChineseMedicine"]
+    },
+    "Examination": {
+      "label": "检查",
+      "description": "实验室检查和影像学检查",
+      "properties": ["name", "category", "normal_range", "clinical_significance", "preparation"],
+      "subtypes": ["LabTest", "ImagingExam", "PhysicalExam", "PathologyExam"]
+    },
+    "BodyPart": {
+      "label": "身体部位",
+      "description": "人体解剖结构",
+      "properties": ["name", "system", "location", "function"],
+      "subtypes": ["Organ", "Tissue", "System"]
+    },
+    "Treatment": {
+      "label": "治疗方案",
+      "description": "治疗手段和方案",
+      "properties": ["name", "type", "description", "indications", "side_effects"],
+      "subtypes": ["DrugTherapy", "SurgeryTherapy", "RadiationTherapy", "Rehabilitation"]
+    }
+  },
+  "relation_types": {
+    "HAS_SYMPTOM": {
+      "source": "Disease",
+      "target": "Symptom",
+      "description": "疾病表现出的症状",
+      "properties": ["frequency", "severity", "stage"]
+    },
+    "TREATED_BY": {
+      "source": "Disease",
+      "target": "Drug",
+      "description": "疾病对应的治疗药物",
+      "properties": ["efficacy", "line_of_therapy", "evidence_level"]
+    },
+    "DIAGNOSED_BY": {
+      "source": "Disease",
+      "target": "Examination",
+      "description": "疾病需要的检查项目",
+      "properties": ["sensitivity", "specificity", "necessity"]
+    },
+    "AFFECTS": {
+      "source": "Disease",
+      "target": "BodyPart",
+      "description": "疾病影响的身体部位",
+      "properties": ["mechanism", "severity"]
+    },
+    "INTERACTS_WITH": {
+      "source": "Drug",
+      "target": "Drug",
+      "description": "药物相互作用",
+      "properties": ["interaction_type", "severity", "clinical_effect"]
+    },
+    "CONTRAINDICATED_FOR": {
+      "source": "Drug",
+      "target": "Disease",
+      "description": "药物禁忌症",
+      "properties": ["reason", "severity"]
+    },
+    "ADMINISTERED_FOR": {
+      "source": "Treatment",
+      "target": "Disease",
+      "description": "治疗方案适用疾病",
+      "properties": ["efficacy", "stage"]
+    },
+    "COMORBID_WITH": {
+      "source": "Disease",
+      "target": "Disease",
+      "description": "疾病共病关系",
+      "properties": ["correlation_strength", "shared_mechanism"]
+    }
+  },
+  "metadata": {
+    "author": "MoKangMedical",
+    "created": "2026-04-26",
+    "source_references": [
+      "ICD-10 国际疾病分类",
+      "SNOMED CT 临床术语",
+      "ATC 药物分类系统",
+      "MeSH 医学主题词表"
+    ]
+  }
+}
