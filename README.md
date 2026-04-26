@@ -1,6 +1,6 @@
-# 📚 Ponder Knowledge Platform — 医疗知识工程平台
+# 📚 Ponder Knowledge Platform
 
-> 构建、管理和应用医疗领域知识图谱与知识库
+**医疗知识工程平台** — 构建、管理和应用医疗领域知识图谱与知识库。
 
 ---
 
