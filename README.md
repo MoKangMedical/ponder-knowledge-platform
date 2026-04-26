@@ -104,6 +104,23 @@ uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
 
 ---
 
+---
+
+## 🔗 相关项目
+
+| 项目 | 定位 |
+|------|------|
+| [OPC Platform](https://github.com/MoKangMedical/opcplatform) | 一人公司全链路学习平台 |
+| [Digital Sage](https://github.com/MoKangMedical/digital-sage) | 与100位智者对话 |
+| [Cloud Memorial](https://github.com/MoKangMedical/cloud-memorial) | AI思念亲人平台 |
+| [天眼 Tianyan](https://github.com/MoKangMedical/tianyan) | 市场预测平台 |
+| [MediChat-RD](https://github.com/MoKangMedical/medichat-rd) | 罕病诊断平台 |
+| [MedRoundTable](https://github.com/MoKangMedical/medroundtable) | 临床科研圆桌会 |
+| [DrugMind](https://github.com/MoKangMedical/drugmind) | 药物研发数字孪生 |
+| [MediPharma](https://github.com/MoKangMedical/medi-pharma) | AI药物发现平台 |
+| [Minder](https://github.com/MoKangMedical/minder) | AI知识管理平台 |
+| [Biostats](https://github.com/MoKangMedical/Biostats) | 生物统计分析平台 |
+
 ## 📄 License
 
 MIT License — 详见 [LICENSE](./LICENSE)
